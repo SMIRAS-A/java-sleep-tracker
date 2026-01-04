@@ -17,13 +17,19 @@ public class SleepTrackerApp {
             new UserChronotype()
     );
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         if (args.length == 0) {
             System.out.println("Укажите путь к файлу с логом сна");
             return;
         }
 
-        List<SleepingSession> sessions = SleepLogReader.read(args[0]);
+        List<SleepingSession> sessions;
+        try {
+            sessions = SleepLogReader.read(args[0]);
+        } catch (IOException e) {
+            System.err.println("Ошибка при чтении файла: " + e.getMessage());
+            return;
+        }
 
         ANALYZERS.forEach(analyzer -> {
             SleepAnalysisResult result = analyzer.apply(sessions);

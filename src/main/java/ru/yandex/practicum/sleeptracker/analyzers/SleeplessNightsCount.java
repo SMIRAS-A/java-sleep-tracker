@@ -5,6 +5,7 @@ import ru.yandex.practicum.sleeptracker.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -14,25 +15,18 @@ public class SleeplessNightsCount implements SleepAnalyzer {
             return new SleepAnalysisResult("Количество бессонных ночей", 0L);
         }
 
-        List<SleepingSession> sorted = sessions.stream()
-                .sorted((a, b) -> a.start().compareTo(b.start()))
+        List<SleepingSession> sortedByWake = sessions.stream()
+                .sorted(Comparator.comparing(SleepingSession::end))
                 .toList();
 
-        LocalDate minWake = sorted.stream()
-                .map(s -> s.end().toLocalDate())
-                .min(LocalDate::compareTo)
-                .get();
-
-        LocalDate maxWake = sorted.stream()
-                .map(s -> s.end().toLocalDate())
-                .max(LocalDate::compareTo)
-                .get();
+        LocalDate minWake = sortedByWake.getFirst().end().toLocalDate();
+        LocalDate maxWake = sortedByWake.getLast().end().toLocalDate();
 
         long totalNights = Period.between(minWake, maxWake).getDays() + 1;
 
         long sleptNights = Stream.iterate(minWake, d -> d.plusDays(1))
                 .limit(totalNights)
-                .filter(night -> sorted.stream().anyMatch(s -> coversNight(s, night)))
+                .filter(night -> sessions.stream().anyMatch(s -> coversNight(s, night)))
                 .count();
 
         return new SleepAnalysisResult("Количество бессонных ночей", totalNights - sleptNights);

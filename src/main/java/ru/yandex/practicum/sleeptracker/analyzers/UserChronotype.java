@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Period;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,26 +18,19 @@ public class UserChronotype implements SleepAnalyzer {
             return new SleepAnalysisResult("Хронотип пользователя", "Неизвестно");
         }
 
-        List<SleepingSession> sorted = sessions.stream()
-                .sorted((a, b) -> a.start().compareTo(b.start()))
+        List<SleepingSession> sortedByWake = sessions.stream()
+                .sorted(Comparator.comparing(SleepingSession::end))
                 .toList();
 
-        LocalDate minWake = sorted.stream()
-                .map(s -> s.end().toLocalDate())
-                .min(LocalDate::compareTo)
-                .get();
-
-        LocalDate maxWake = sorted.stream()
-                .map(s -> s.end().toLocalDate())
-                .max(LocalDate::compareTo)
-                .get();
+        LocalDate minWake = sortedByWake.getFirst().end().toLocalDate();
+        LocalDate maxWake = sortedByWake.getLast().end().toLocalDate();
 
         long totalNights = Period.between(minWake, maxWake).getDays() + 1;
 
         Map<Chronotype, Long> counts = Stream.iterate(minWake, d -> d.plusDays(1))
                 .limit(totalNights)
-                .filter(night -> sorted.stream().anyMatch(s -> coversNight(s, night)))
-                .map(night -> getMainSession(sorted, night))
+                .filter(night -> sessions.stream().anyMatch(s -> coversNight(s, night)))
+                .map(night -> getMainSession(sessions, night))
                 .map(this::classify)
                 .collect(Collectors.groupingBy(t -> t, Collectors.counting()));
 
@@ -62,7 +56,7 @@ public class UserChronotype implements SleepAnalyzer {
     private SleepingSession getMainSession(List<SleepingSession> sessions, LocalDate night) {
         return sessions.stream()
                 .filter(s -> coversNight(s, night))
-                .min((a, b) -> a.start().compareTo(b.start()))
+                .min(Comparator.comparing(SleepingSession::start))
                 .orElse(null);
     }
 
